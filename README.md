@@ -50,7 +50,7 @@ Key capabilities include:
 ## Development Status
 
 - **Documentation Baseline**: initial `1.0.0 Approved` on 2026-08-03 (47 governed documents, 78 ADRs at baseline; ADRs are added over time — see `docs/adr/README.md` for the current count); documents are versioned independently after the baseline — see each document's `Version` field
-- **Implementation Status**: Not started. No implementation task has been opened yet; see [`docs/implementation/IMPLEMENTATION_TRACKER.md`](docs/implementation/IMPLEMENTATION_TRACKER.md).
+- **Implementation Status**: `ATLAS-IMP-001` in progress — MVP-001 Foundation slice underway. Runnable backend (FastAPI, local + LDAP/AD authentication broker per ADR-079, RBAC, audit log, health check, PostgreSQL/Alembic baseline) and a frontend workspace shell (React 19 + Vite) exist. Backend static checks (mypy strict, ruff) pass; the test suite requires a live PostgreSQL instance to run. See [`docs/implementation/IMPLEMENTATION_TRACKER.md`](docs/implementation/IMPLEMENTATION_TRACKER.md).
 
 ---
 
@@ -60,15 +60,47 @@ Key capabilities include:
 AGENTS.md          AI development rules and instruction precedence
 README.md          Main project overview and setup instructions
 docs/              Product, architecture, platform, security, AI, and development documents
+backend/           FastAPI backend modular-monolith API, models, and Alembic migrations
+frontend/          React 19 + TypeScript + Vite operations workspace shell
+scripts/           Bootstrap, dev server, quality-check, and admin-bootstrap scripts
+docker-compose.yml PostgreSQL 18 for local development
+pyproject.toml     Python project dependencies and tooling configuration
+.env.example       Template for local environment configuration
 ```
-
-The architecture documents (`docs/010`-`docs/016`) and development contracts (`docs/050`-`docs/059`) describe a planned `backend/` (FastAPI), `frontend/` (React 19 + TypeScript + Vite), `scripts/`, `docker-compose.yml`, and `pyproject.toml`. None of these exist yet — they will be created when an implementation task is explicitly opened.
 
 ---
 
 ## Getting Started
 
-There is no runnable implementation yet. Once an implementation task is opened, this section will describe prerequisites and local quickstart steps consistent with `docs/038_Deployment_and_Bootstrap.md` and the accepted ADRs (`ADR-001`, `ADR-002`, `ADR-003`).
+### Prerequisites
+
+- Python 3.12+
+- Node.js 20+ (for the frontend; not required to run the backend alone)
+- Docker & Docker Compose (for local PostgreSQL 18), or a PostgreSQL 18 instance reachable via `ATLAS_DATABASE_URL`
+
+### Local Quickstart
+
+1. **Bootstrap dependencies**:
+   ```cmd
+   scripts\bootstrap.cmd
+   ```
+2. **Start PostgreSQL, run migrations, and launch dev servers**:
+   ```cmd
+   scripts\dev.cmd
+   ```
+   - **Web Workspace Shell**: `http://localhost:5173`
+   - **Interactive API Documentation**: `http://localhost:8000/docs`
+   - **System Health Endpoint**: `http://localhost:8000/api/health`
+3. **Create the first local administrator** (ATLAS-030 Section 11 bootstrap):
+   ```cmd
+   scripts\bootstrap_admin.cmd
+   ```
+   Prints a one-time generated password; you must change it on first login.
+4. **Development identity (ADR-003)**: with `ATLAS_ENABLE_DEVELOPMENT_IDENTITY=true` (the `.env.example` default) and `ATLAS_ENVIRONMENT` in `development`/`test`, use "Continue as Local Operator" on the login page. It grants only `identity.self.read` — it is not an administrator.
+5. **Run quality checks**:
+   ```cmd
+   scripts\check.cmd
+   ```
 
 ---
 
