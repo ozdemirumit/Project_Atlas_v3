@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 
 
 class AuditEventResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     occurred_at: datetime
     event_type: str
     outcome: str

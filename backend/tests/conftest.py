@@ -7,6 +7,9 @@ default `postgresql+psycopg://atlas:atlas@localhost:5432/atlas_test`. Every
 fixture here descends from `engine`, which skips the whole run fast (~2s)
 if that database is unreachable, instead of hanging on a slow TCP timeout.
 """
+import socket
+import threading
+import time
 import uuid
 from collections.abc import Iterator
 
@@ -19,6 +22,7 @@ os.environ.setdefault(
 os.environ.setdefault("ATLAS_ENABLE_DEVELOPMENT_IDENTITY", "true")
 
 import pytest
+import uvicorn
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -28,6 +32,7 @@ from app.core.database import Base, get_db
 from app.main import create_app
 from app.models import Permission, Role, RolePermission
 from app.rbac.permissions import ALL_PERMISSIONS, SEED_ROLES
+from app.simulators.sanfabric.app import app as sanfabric_simulator_app
 
 
 @pytest.fixture(scope="session")
@@ -93,3 +98,29 @@ def client(db_session: Session) -> Iterator[TestClient]:
 @pytest.fixture()
 def correlation_id() -> str:
     return str(uuid.uuid4())
+
+
+@pytest.fixture(scope="session")
+def sanfabric_simulator_url() -> Iterator[str]:
+    """Runs the real SAN fabric simulator ASGI app on a live loopback port
+    for the duration of the test session, so connector tests exercise a real
+    HTTP round trip rather than mocking the transport layer.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+
+    config = uvicorn.Config(sanfabric_simulator_app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 5
+    while not server.started:
+        if time.monotonic() > deadline:
+            raise RuntimeError("SAN fabric simulator did not start within 5 seconds.")
+        time.sleep(0.02)
+
+    yield f"http://127.0.0.1:{port}"
+
+    server.should_exit = True
+    thread.join(timeout=5)
