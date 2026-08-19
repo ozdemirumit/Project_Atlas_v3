@@ -102,6 +102,17 @@ function InvestigationDetail({ investigationKey }: { investigationKey: string })
     mutationFn: (hypothesisId: string) => api.draftRecommendation(investigationKey, hypothesisId),
     onSuccess: invalidate,
   });
+  const submitRecommendation = useMutation({
+    mutationFn: (recommendationId: string) => api.submitRecommendation(investigationKey, recommendationId),
+    onSuccess: invalidate,
+  });
+  const decideRecommendation = useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: "approved" | "rejected" }) =>
+      api.decideRecommendation(investigationKey, id, decision, ""),
+    onSuccess: invalidate,
+    onError: (err) =>
+      window.alert(err instanceof ApiError ? err.message : "Approval decision failed."),
+  });
 
   const options: InventoryEntity[] = entities.data ?? [];
 
@@ -168,10 +179,32 @@ function InvestigationDetail({ investigationKey }: { investigationKey: string })
           <ul>
             {report.data.recommendations.map((r) => (
               <li key={r.id}>
-                <strong>{r.title}</strong> (risk: {r.risk_level}, ~{r.estimated_duration_minutes}min) —{" "}
-                {r.summary}
+                <strong>{r.title}</strong> (risk: {r.risk_level}, ~{r.estimated_duration_minutes}min,
+                status: {r.status}) — {r.summary}
                 <br />
                 Rollback: {r.rollback_plan}
+                <br />
+                {r.status === "proposed" && (
+                  <button type="button" onClick={() => submitRecommendation.mutate(r.id)}>
+                    Submit for approval
+                  </button>
+                )}
+                {r.status === "pending_approval" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => decideRecommendation.mutate({ id: r.id, decision: "approved" })}
+                    >
+                      Approve
+                    </button>{" "}
+                    <button
+                      type="button"
+                      onClick={() => decideRecommendation.mutate({ id: r.id, decision: "rejected" })}
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>

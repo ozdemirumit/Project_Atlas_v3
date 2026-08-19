@@ -6,12 +6,15 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.audit.service import record_event
 from app.auth.dependencies import require_permission
 from app.auth.schemas import CurrentSubject
 from app.core.database import get_db
 from app.decision.impact import assess_impact
 from app.decision.rca import generate_hypotheses
 from app.decision.recommendation import draft_recommendation
+from app.guardrails.dlp import find_violations
+from app.models.governance import RecommendationApproval
 from app.models.investigation import (
     ChangeImpactAssessment,
     Investigation,
@@ -19,7 +22,7 @@ from app.models.investigation import (
     RcaHypothesis,
     Recommendation,
 )
-from app.rbac.permissions import INVESTIGATION_READ, INVESTIGATION_WRITE
+from app.rbac.permissions import APPROVAL_DECIDE, INVESTIGATION_READ, INVESTIGATION_WRITE
 
 router = APIRouter(prefix="/investigations", tags=["investigations"])
 
@@ -176,9 +179,25 @@ def add_event(
     key: str,
     payload: AddEventRequest,
     db: Session = Depends(get_db),
-    _current: CurrentSubject = Depends(require_permission(INVESTIGATION_WRITE)),
+    current: CurrentSubject = Depends(require_permission(INVESTIGATION_WRITE)),
 ) -> InvestigationEvent:
     investigation = _get_investigation_or_404(db, key)
+
+    violations = find_violations(payload.description)
+    if violations:
+        record_event(
+            db,
+            event_type="guardrail.dlp_violation",
+            outcome="denied",
+            correlation_id=str(uuid.uuid4()),
+            subject_id=current.subject_id,
+            detail={"investigation_key": key, "patterns": violations},
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=422, detail="Event description was blocked by a DLP guardrail (ATLAS-047)."
+        )
+
     event = InvestigationEvent(
         investigation_id=investigation.id,
         event_type=payload.event_type,
@@ -289,3 +308,120 @@ def draft_investigation_recommendation(
     db.add(recommendation)
     db.commit()
     return recommendation
+
+
+class DecideApprovalRequest(BaseModel):
+    decision: str
+    comment: str = ""
+    model_config = {"extra": "forbid"}
+
+
+class ApprovalResponse(BaseModel):
+    id: uuid.UUID
+    approver_subject_id: str
+    decision: str
+    comment: str
+    decided_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+def _get_recommendation_or_404(db: Session, investigation: Investigation, recommendation_id: uuid.UUID) -> Recommendation:
+    recommendation = (
+        db.query(Recommendation)
+        .filter(Recommendation.id == recommendation_id, Recommendation.investigation_id == investigation.id)
+        .one_or_none()
+    )
+    if recommendation is None:
+        raise HTTPException(status_code=404, detail="Unknown recommendation.")
+    return recommendation
+
+
+@router.post("/{key}/recommendations/{recommendation_id}/submit", response_model=RecommendationResponse)
+def submit_recommendation_for_approval(
+    key: str,
+    recommendation_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _current: CurrentSubject = Depends(require_permission(INVESTIGATION_WRITE)),
+) -> Recommendation:
+    investigation = _get_investigation_or_404(db, key)
+    recommendation = _get_recommendation_or_404(db, investigation, recommendation_id)
+    if recommendation.status != "proposed":
+        raise HTTPException(status_code=409, detail=f"Recommendation is already {recommendation.status}.")
+    recommendation.status = "pending_approval"
+    db.commit()
+    return recommendation
+
+
+@router.post(
+    "/{key}/recommendations/{recommendation_id}/decide", response_model=RecommendationResponse
+)
+def decide_recommendation_approval(
+    key: str,
+    recommendation_id: uuid.UUID,
+    payload: DecideApprovalRequest,
+    db: Session = Depends(get_db),
+    current: CurrentSubject = Depends(require_permission(APPROVAL_DECIDE)),
+) -> Recommendation:
+    if payload.decision not in {"approved", "rejected"}:
+        raise HTTPException(status_code=422, detail="decision must be approved or rejected.")
+
+    investigation = _get_investigation_or_404(db, key)
+    recommendation = _get_recommendation_or_404(db, investigation, recommendation_id)
+    if recommendation.status != "pending_approval":
+        raise HTTPException(
+            status_code=409, detail="Recommendation must be pending_approval before it can be decided."
+        )
+
+    # ATLAS-037 separation of duties: the investigation's opener cannot also
+    # approve its own recommendation. No AI actor can approve at all — this
+    # endpoint requires an authenticated human session like any other.
+    if current.subject_id == investigation.created_by:
+        raise HTTPException(
+            status_code=403,
+            detail="The investigation's opener cannot approve their own recommendation (separation of duties).",
+        )
+
+    db.add(
+        RecommendationApproval(
+            recommendation_id=recommendation.id,
+            approver_subject_id=current.subject_id,
+            decision=payload.decision,
+            comment=payload.comment,
+        )
+    )
+    recommendation.status = payload.decision
+
+    record_event(
+        db,
+        event_type="approval.decision",
+        outcome="success",
+        correlation_id=str(uuid.uuid4()),
+        subject_id=current.subject_id,
+        detail={
+            "investigation_key": key,
+            "recommendation_id": str(recommendation.id),
+            "decision": payload.decision,
+        },
+    )
+    db.commit()
+    return recommendation
+
+
+@router.get(
+    "/{key}/recommendations/{recommendation_id}/approvals", response_model=list[ApprovalResponse]
+)
+def list_recommendation_approvals(
+    key: str,
+    recommendation_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _current: CurrentSubject = Depends(require_permission(INVESTIGATION_READ)),
+) -> list[RecommendationApproval]:
+    investigation = _get_investigation_or_404(db, key)
+    _get_recommendation_or_404(db, investigation, recommendation_id)
+    return (
+        db.query(RecommendationApproval)
+        .filter(RecommendationApproval.recommendation_id == recommendation_id)
+        .order_by(RecommendationApproval.decided_at.desc())
+        .all()
+    )

@@ -181,4 +181,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ hypothesis_id: hypothesisId }),
     }),
+  submitRecommendation: (key: string, recommendationId: string) =>
+    request<Recommendation>(`/investigations/${key}/recommendations/${recommendationId}/submit`, {
+      method: "POST",
+    }),
+  decideRecommendation: (key: string, recommendationId: string, decision: "approved" | "rejected", comment: string) =>
+    request<Recommendation>(`/investigations/${key}/recommendations/${recommendationId}/decide`, {
+      method: "POST",
+      body: JSON.stringify({ decision, comment }),
+    }),
 };

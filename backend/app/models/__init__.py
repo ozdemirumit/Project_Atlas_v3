@@ -1,5 +1,6 @@
 from app.models.audit import AuditEvent
 from app.models.connector_health import ConnectorHealthCheck
+from app.models.governance import RecommendationApproval
 from app.models.identity import LocalCredential, Permission, Role, RolePermission, User, UserRole
 from app.models.inventory import ConnectorInstance, InventoryEntity, InventoryRelationship
 from app.models.investigation import (
@@ -27,6 +28,7 @@ __all__ = [
     "Permission",
     "RcaHypothesis",
     "Recommendation",
+    "RecommendationApproval",
     "Role",
     "RolePermission",
     "User",
