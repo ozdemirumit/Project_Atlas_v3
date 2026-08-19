@@ -1,4 +1,4 @@
-"""Permission keys and seed roles for the MVP-001/MVP-002 slice.
+"""Permission keys and seed roles for the MVP-001/MVP-002/MVP-003 slice.
 
 ATLAS-031 owns the full RBAC model; this module seeds only the permissions
 the current API surface enforces. New permissions are added here as new
@@ -13,6 +13,8 @@ CONNECTOR_SYNC = "connector.sync"
 CONNECTOR_HEALTH_READ = "connector.health.read"
 KNOWLEDGE_READ = "knowledge.read"
 KNOWLEDGE_ADMIN = "knowledge.admin"
+INVESTIGATION_READ = "investigation.read"
+INVESTIGATION_WRITE = "investigation.write"
 
 ALL_PERMISSIONS: dict[str, str] = {
     IDENTITY_SELF_READ: "Read the caller's own identity and session context.",
@@ -23,6 +25,8 @@ ALL_PERMISSIONS: dict[str, str] = {
     CONNECTOR_HEALTH_READ: "Read connector scheduled health-check history.",
     KNOWLEDGE_READ: "Search governed knowledge sources.",
     KNOWLEDGE_ADMIN: "Ingest and manage governed knowledge sources.",
+    INVESTIGATION_READ: "Read investigations, hypotheses, impact assessments, and recommendations.",
+    INVESTIGATION_WRITE: "Open investigations and generate hypotheses, impact assessments, and recommendations.",
 }
 
 # ADR-003: the development identity's default role grants only
@@ -41,5 +45,7 @@ SEED_ROLES: dict[str, list[str]] = {
         CONNECTOR_HEALTH_READ,
         KNOWLEDGE_READ,
         KNOWLEDGE_ADMIN,
+        INVESTIGATION_READ,
+        INVESTIGATION_WRITE,
     ],
 }

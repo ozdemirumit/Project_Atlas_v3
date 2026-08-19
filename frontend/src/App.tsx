@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { Inventory } from "./routes/Inventory";
+import { Investigations } from "./routes/Investigations";
 import { Login } from "./routes/Login";
 import { Workspace } from "./routes/Workspace";
 
@@ -34,6 +35,14 @@ export function App() {
             element={
               <RequireAuth>
                 <Inventory />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/investigations"
+            element={
+              <RequireAuth>
+                <Investigations />
               </RequireAuth>
             }
           />

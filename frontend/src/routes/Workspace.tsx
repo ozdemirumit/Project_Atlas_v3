@@ -48,6 +48,13 @@ export function Workspace() {
           <Link to="/inventory">View discovered inventory →</Link>
         </p>
       </section>
+
+      <section>
+        <h2>Decision support</h2>
+        <p>
+          <Link to="/investigations">Open investigations →</Link>
+        </p>
+      </section>
     </main>
   );
 }

@@ -94,6 +94,54 @@ export interface KnowledgeSearchResult {
   score: number;
 }
 
+export interface Investigation {
+  id: string;
+  key: string;
+  title: string;
+  status: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface RcaHypothesis {
+  id: string;
+  fault_family: string;
+  description: string;
+  confidence: string;
+  supporting_evidence: string[];
+  contradicting_evidence: string[];
+  status: string;
+  generated_by: string;
+}
+
+export interface ChangeImpactAssessment {
+  id: string;
+  target_entity_id: string;
+  affected_entity_ids: string[];
+  graph_gaps: string[];
+  summary: string;
+}
+
+export interface Recommendation {
+  id: string;
+  title: string;
+  summary: string;
+  risk_level: string;
+  estimated_duration_minutes: number;
+  preconditions: string[];
+  rollback_plan: string;
+  status: string;
+  generated_by: string;
+}
+
+export interface InvestigationReport {
+  investigation: Investigation;
+  events: unknown[];
+  hypotheses: RcaHypothesis[];
+  impact_assessments: ChangeImpactAssessment[];
+  recommendations: Recommendation[];
+}
+
 export const api = {
   health: () => request<HealthStatus>("/health"),
   me: () => request<CurrentSubject>("/auth/me"),
@@ -109,4 +157,28 @@ export const api = {
     request<ConnectorHealthCheck[]>(`/connectors/${key}/health-checks`),
   knowledgeSearch: (q: string) =>
     request<KnowledgeSearchResult[]>(`/knowledge/search?q=${encodeURIComponent(q)}`),
+  listInvestigations: () => request<Investigation[]>("/investigations"),
+  createInvestigation: (key: string, title: string) =>
+    request<Investigation>("/investigations", { method: "POST", body: JSON.stringify({ key, title }) }),
+  getInvestigationReport: (key: string) => request<InvestigationReport>(`/investigations/${key}/report`),
+  generateHypotheses: (key: string, targetEntityId: string) =>
+    request<RcaHypothesis[]>(`/investigations/${key}/hypotheses/generate`, {
+      method: "POST",
+      body: JSON.stringify({ target_entity_id: targetEntityId }),
+    }),
+  updateHypothesisStatus: (key: string, hypothesisId: string, status: string) =>
+    request<RcaHypothesis>(`/investigations/${key}/hypotheses/${hypothesisId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  assessImpact: (key: string, targetEntityId: string) =>
+    request<ChangeImpactAssessment>(`/investigations/${key}/impact`, {
+      method: "POST",
+      body: JSON.stringify({ target_entity_id: targetEntityId }),
+    }),
+  draftRecommendation: (key: string, hypothesisId: string) =>
+    request<Recommendation>(`/investigations/${key}/recommendations`, {
+      method: "POST",
+      body: JSON.stringify({ hypothesis_id: hypothesisId }),
+    }),
 };
