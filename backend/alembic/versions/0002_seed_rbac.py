@@ -12,12 +12,27 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-from app.rbac.permissions import SEED_ROLES, ALL_PERMISSIONS
-
 revision: str = "0002"
 down_revision: str | None = "0001"
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
+
+# Frozen at this migration's creation time — do NOT import from
+# app.rbac.permissions here. That module has grown permissions in later
+# migrations (0004, 0006, 0008, 0010); importing the *current* module state
+# from this earlier migration would re-insert those later permissions too
+# and collide with the migration that actually owns them. Every governed
+# migration's seed data must be a frozen literal, not a live import.
+ALL_PERMISSIONS: dict[str, str] = {
+    "identity.self.read": "Read the caller's own identity and session context.",
+    "audit.read": "Read audit events.",
+    "rbac.admin": "Manage roles, permissions, and role assignments.",
+}
+
+SEED_ROLES: dict[str, list[str]] = {
+    "local_operator_dev": ["identity.self.read"],
+    "administrator": ["identity.self.read", "audit.read", "rbac.admin"],
+}
 
 permissions_table = sa.table(
     "permissions",

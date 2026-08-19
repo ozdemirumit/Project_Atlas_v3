@@ -3,9 +3,18 @@
 ADR-001: PostgreSQL-specific behavior must be tested against PostgreSQL
 rather than inferred from SQLite, so these tests require a real PostgreSQL
 instance (see docker-compose.yml) reachable at ATLAS_DATABASE_URL, or the
-default `postgresql+psycopg://atlas:atlas@localhost:5432/atlas_test`. Every
-fixture here descends from `engine`, which skips the whole run fast (~2s)
-if that database is unreachable, instead of hanging on a slow TCP timeout.
+default `postgresql+psycopg://atlas3:atlas3@localhost:5432/atlas3_test`.
+Deliberately named `atlas3`/`atlas3_test`, not the generic `atlas`/`atlas_test` — this
+machine has been observed running more than one Project Atlas
+implementation against the same local PostgreSQL server, and a generic
+name collided with another session's database (see 2026-08-19 incident:
+this suite's own schema-reset step destroyed another session's tables
+because they shared the name `atlas_test`). Never point this suite at a
+database this project's own Alembic migrations did not create.
+
+Every fixture here descends from `engine`, which skips the whole run fast
+(~2s) if that database is unreachable, instead of hanging on a slow TCP
+timeout.
 """
 import socket
 import threading
@@ -17,7 +26,7 @@ import os
 
 os.environ.setdefault("ATLAS_ENVIRONMENT", "test")
 os.environ.setdefault(
-    "ATLAS_DATABASE_URL", "postgresql+psycopg://atlas:atlas@localhost:5432/atlas_test"
+    "ATLAS_DATABASE_URL", "postgresql+psycopg://atlas3:atlas3@localhost:5432/atlas3_test"
 )
 os.environ.setdefault("ATLAS_ENABLE_DEVELOPMENT_IDENTITY", "true")
 os.environ.setdefault("ATLAS_HEALTH_CHECK_INTERVAL_SECONDS", "0")  # tests drive checks explicitly

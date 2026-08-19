@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session as DbSession
 
 from app.auth.schemas import CurrentSubject
@@ -11,10 +11,14 @@ from app.models.identity import Permission, RolePermission, User, UserRole
 
 
 def get_current_subject(
+    request: Request,
     db: DbSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    session_token: str | None = Cookie(default=None, alias="atlas_session"),
 ) -> CurrentSubject:
+    # Read the cookie by the configured name (not a hardcoded literal) so a
+    # deployment that overrides ATLAS_SESSION_COOKIE_NAME stays consistent
+    # between the login route (app.api.routes.auth) and this dependency.
+    session_token = request.cookies.get(settings.session_cookie_name)
     if session_token is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
 

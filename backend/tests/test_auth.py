@@ -11,7 +11,7 @@ def test_me_requires_authentication(client):
 def test_development_login_grants_only_self_read(client):
     response = client.post("/api/auth/login/development")
     assert response.status_code == 204
-    assert client.cookies.get("atlas_session") is not None
+    assert client.cookies.get("atlas3_session") is not None
 
     me = client.get("/api/auth/me")
     assert me.status_code == 200
@@ -37,7 +37,7 @@ def test_local_login_with_wrong_password_is_rejected(client, db_session):
         "/api/auth/login/local", json={"username": "alice", "password": "wrong-password"}
     )
     assert response.status_code == 401
-    assert client.cookies.get("atlas_session") is None
+    assert client.cookies.get("atlas3_session") is None
 
 
 def test_local_login_with_correct_password_succeeds(client, db_session):
@@ -51,7 +51,7 @@ def test_local_login_with_correct_password_succeeds(client, db_session):
         "/api/auth/login/local", json={"username": "bob", "password": "correct-horse"}
     )
     assert response.status_code == 204
-    assert client.cookies.get("atlas_session") is not None
+    assert client.cookies.get("atlas3_session") is not None
 
 
 def test_logout_invalidates_session(client):

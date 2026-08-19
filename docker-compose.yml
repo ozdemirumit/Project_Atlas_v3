@@ -3,18 +3,18 @@ services:
     image: postgres:18
     restart: unless-stopped
     environment:
-      POSTGRES_USER: atlas
-      POSTGRES_PASSWORD: atlas
-      POSTGRES_DB: atlas
+      POSTGRES_USER: atlas3
+      POSTGRES_PASSWORD: atlas3
+      POSTGRES_DB: atlas3
     ports:
       - "5432:5432"
     volumes:
-      - atlas_postgres_data:/var/lib/postgresql/data
+      - atlas3_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas"]
+      test: ["CMD-SHELL", "pg_isready -U atlas3 -d atlas3"]
       interval: 5s
       timeout: 3s
       retries: 10
 
 volumes:
-  atlas_postgres_data:
+  atlas3_postgres_data:

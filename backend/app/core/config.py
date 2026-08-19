@@ -16,11 +16,11 @@ class Settings(BaseSettings):
 
     environment: Literal["development", "test", "production"] = "development"
 
-    database_url: str = "postgresql+psycopg://atlas:atlas@localhost:5432/atlas"
+    database_url: str = "postgresql+psycopg://atlas3:atlas3@localhost:5432/atlas3"
 
     session_secret: str = "change-me-in-every-non-development-environment"
     session_ttl_seconds: int = 60 * 60 * 8
-    session_cookie_name: str = "atlas_session"
+    session_cookie_name: str = "atlas3_session"
 
     # ADR-003: development identity provider. Disabled by default; can only be
     # honored in development/test. See app.auth.providers.development.
