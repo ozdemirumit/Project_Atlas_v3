@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     ldap_user_search_filter: str = "(uid={username})"
     ldap_use_tls: bool = True
 
+    # MVP-002: scheduled connector health checks. 0 disables the scheduler
+    # (useful for tests, which drive checks explicitly).
+    health_check_interval_seconds: float = 300.0
+
     @model_validator(mode="after")
     def _development_identity_requires_non_production(self) -> "Settings":
         # ADR-003: enabling the development identity provider in production is

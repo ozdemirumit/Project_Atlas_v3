@@ -102,6 +102,69 @@ export function Inventory() {
             {relationships.data.filter((r) => r.relationship_type === "member_of").length} member_of</p>
         </section>
       )}
+
+      <ConnectorHealth />
+      <KnowledgeSearch />
     </main>
+  );
+}
+
+function ConnectorHealth() {
+  const checks = useQuery({
+    queryKey: ["connector-health", CONNECTOR_KEY],
+    queryFn: () => api.connectorHealthChecks(CONNECTOR_KEY),
+  });
+
+  return (
+    <section>
+      <h2>Connector health</h2>
+      {checks.isLoading && <p>Loading…</p>}
+      {checks.data && checks.data.length === 0 && <p>No health checks recorded yet.</p>}
+      {checks.data && checks.data.length > 0 && (
+        <ul>
+          {checks.data.slice(0, 5).map((check) => (
+            <li key={check.id}>
+              {new Date(check.checked_at).toLocaleString()} — {check.status} ({check.latency_ms}ms)
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function KnowledgeSearch() {
+  const [query, setQuery] = useState("");
+  const search = useMutation({ mutationFn: (q: string) => api.knowledgeSearch(q) });
+
+  return (
+    <section>
+      <h2>Knowledge search</h2>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (query.trim()) search.mutate(query);
+        }}
+      >
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search knowledge…" />
+        <button type="submit" disabled={search.isPending}>
+          Search
+        </button>
+      </form>
+      {search.isError && (
+        <p style={{ color: "crimson" }}>
+          {search.error instanceof ApiError ? search.error.message : "Search failed."}
+        </p>
+      )}
+      {search.data && (
+        <ul>
+          {search.data.map((result) => (
+            <li key={result.chunk_id}>
+              <strong>{result.source_title}</strong> (score {result.score.toFixed(2)}): {result.content}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

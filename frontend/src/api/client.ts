@@ -78,6 +78,22 @@ export interface SyncResult {
   relationships_written: number;
 }
 
+export interface ConnectorHealthCheck {
+  id: string;
+  checked_at: string;
+  status: "healthy" | "unhealthy";
+  latency_ms: number;
+  detail: Record<string, unknown>;
+}
+
+export interface KnowledgeSearchResult {
+  chunk_id: string;
+  source_key: string;
+  source_title: string;
+  content: string;
+  score: number;
+}
+
 export const api = {
   health: () => request<HealthStatus>("/health"),
   me: () => request<CurrentSubject>("/auth/me"),
@@ -89,4 +105,8 @@ export const api = {
   inventoryEntities: () => request<InventoryEntity[]>("/inventory/entities"),
   inventoryRelationships: () => request<InventoryRelationship[]>("/inventory/relationships"),
   syncConnector: (key: string) => request<SyncResult>(`/connectors/${key}/sync`, { method: "POST" }),
+  connectorHealthChecks: (key: string) =>
+    request<ConnectorHealthCheck[]>(`/connectors/${key}/health-checks`),
+  knowledgeSearch: (q: string) =>
+    request<KnowledgeSearchResult[]>(`/knowledge/search?q=${encodeURIComponent(q)}`),
 };

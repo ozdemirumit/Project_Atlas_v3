@@ -10,6 +10,9 @@ AUDIT_READ = "audit.read"
 RBAC_ADMIN = "rbac.admin"
 INVENTORY_READ = "inventory.read"
 CONNECTOR_SYNC = "connector.sync"
+CONNECTOR_HEALTH_READ = "connector.health.read"
+KNOWLEDGE_READ = "knowledge.read"
+KNOWLEDGE_ADMIN = "knowledge.admin"
 
 ALL_PERMISSIONS: dict[str, str] = {
     IDENTITY_SELF_READ: "Read the caller's own identity and session context.",
@@ -17,6 +20,9 @@ ALL_PERMISSIONS: dict[str, str] = {
     RBAC_ADMIN: "Manage roles, permissions, and role assignments.",
     INVENTORY_READ: "Read discovered inventory entities and relationships.",
     CONNECTOR_SYNC: "Trigger a connector discovery/reconciliation run.",
+    CONNECTOR_HEALTH_READ: "Read connector scheduled health-check history.",
+    KNOWLEDGE_READ: "Search governed knowledge sources.",
+    KNOWLEDGE_ADMIN: "Ingest and manage governed knowledge sources.",
 }
 
 # ADR-003: the development identity's default role grants only
@@ -32,5 +38,8 @@ SEED_ROLES: dict[str, list[str]] = {
         RBAC_ADMIN,
         INVENTORY_READ,
         CONNECTOR_SYNC,
+        CONNECTOR_HEALTH_READ,
+        KNOWLEDGE_READ,
+        KNOWLEDGE_ADMIN,
     ],
 }

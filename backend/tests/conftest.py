@@ -20,6 +20,7 @@ os.environ.setdefault(
     "ATLAS_DATABASE_URL", "postgresql+psycopg://atlas:atlas@localhost:5432/atlas_test"
 )
 os.environ.setdefault("ATLAS_ENABLE_DEVELOPMENT_IDENTITY", "true")
+os.environ.setdefault("ATLAS_HEALTH_CHECK_INTERVAL_SECONDS", "0")  # tests drive checks explicitly
 
 import pytest
 import uvicorn

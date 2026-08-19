@@ -11,10 +11,22 @@ from app.auth.schemas import CurrentSubject
 from app.connectors.sanfabric.client import SanFabricClient
 from app.connectors.sanfabric.sync import reconcile
 from app.core.database import get_db
+from app.models.connector_health import ConnectorHealthCheck
 from app.models.inventory import ConnectorInstance, InventoryEntity, InventoryRelationship
-from app.rbac.permissions import CONNECTOR_SYNC, INVENTORY_READ
+from app.rbac.permissions import CONNECTOR_HEALTH_READ, CONNECTOR_SYNC, INVENTORY_READ
 
 router = APIRouter(tags=["inventory"])
+
+
+class ConnectorHealthCheckResponse(BaseModel):
+    id: uuid.UUID
+    connector_instance_id: uuid.UUID
+    checked_at: datetime
+    status: str
+    latency_ms: int
+    detail: dict[str, object]
+
+    model_config = {"from_attributes": True}
 
 
 class InventoryEntityResponse(BaseModel):
@@ -97,3 +109,23 @@ def sync_connector(
     )
     db.commit()
     return SyncResult(connector_instance_key=connector_key, **counts)
+
+
+@router.get("/connectors/{connector_key}/health-checks", response_model=list[ConnectorHealthCheckResponse])
+def list_health_checks(
+    connector_key: str,
+    db: Session = Depends(get_db),
+    limit: int = 20,
+    _current: CurrentSubject = Depends(require_permission(CONNECTOR_HEALTH_READ)),
+) -> list[ConnectorHealthCheck]:
+    instance = db.query(ConnectorInstance).filter(ConnectorInstance.key == connector_key).one_or_none()
+    if instance is None:
+        raise HTTPException(status_code=404, detail="Unknown connector.")
+    checks: list[ConnectorHealthCheck] = (
+        db.query(ConnectorHealthCheck)
+        .filter(ConnectorHealthCheck.connector_instance_id == instance.id)
+        .order_by(ConnectorHealthCheck.checked_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return checks
