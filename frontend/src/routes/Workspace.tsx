@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
@@ -40,6 +40,13 @@ export function Workspace() {
           </p>
         )}
         {health.isError && <p style={{ color: "crimson" }}>Health check failed.</p>}
+      </section>
+
+      <section>
+        <h2>Data and integration</h2>
+        <p>
+          <Link to="/inventory">View discovered inventory →</Link>
+        </p>
       </section>
     </main>
   );

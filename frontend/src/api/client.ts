@@ -55,6 +55,29 @@ export interface AuditEventSummary {
   correlation_id: string;
 }
 
+export interface InventoryEntity {
+  id: string;
+  connector_instance_id: string;
+  entity_type: "fabric" | "switch" | "port" | "zone";
+  external_id: string;
+  display_name: string;
+  attributes: Record<string, unknown>;
+  last_observed_at: string;
+}
+
+export interface InventoryRelationship {
+  id: string;
+  from_entity_id: string;
+  to_entity_id: string;
+  relationship_type: "managed_by" | "member_of";
+}
+
+export interface SyncResult {
+  connector_instance_key: string;
+  entities_written: number;
+  relationships_written: number;
+}
+
 export const api = {
   health: () => request<HealthStatus>("/health"),
   me: () => request<CurrentSubject>("/auth/me"),
@@ -63,4 +86,7 @@ export const api = {
   loginDevelopment: () => request<void>("/auth/login/development", { method: "POST" }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   auditEvents: (limit = 50) => request<AuditEventSummary[]>(`/audit/events?limit=${limit}`),
+  inventoryEntities: () => request<InventoryEntity[]>("/inventory/entities"),
+  inventoryRelationships: () => request<InventoryRelationship[]>("/inventory/relationships"),
+  syncConnector: (key: string) => request<SyncResult>(`/connectors/${key}/sync`, { method: "POST" }),
 };
